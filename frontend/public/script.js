@@ -5,6 +5,7 @@ class QuizApp {
         this.userAnswers = [];
         this.isSubmitted = false;
         this.selectedMatches = {};
+        this.apiUrl = window.location.origin + '/api';
         
         this.initializeElements();
         this.bindEvents();
@@ -63,12 +64,22 @@ class QuizApp {
         this.showLoading();
 
         try {
-            // Simulate API call with mock data
-            await simulateApiDelay();
-            const mockResponse = getMockQuiz(questionType, numQuestions, topic);
+            const response = await fetch(`${this.apiUrl}/generate-quiz`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    topic: topic,
+                    question_type: questionType,
+                    num_questions: parseInt(numQuestions)
+                })
+            });
+
+            const data = await response.json();
             
-            if (mockResponse && mockResponse.success) {
-                this.currentQuiz = mockResponse.quiz;
+            if (data.success && data.quiz) {
+                this.currentQuiz = data.quiz;
                 this.userAnswers = new Array(this.currentQuiz.questions.length).fill(null);
                 this.currentQuestionIndex = 0;
                 this.isSubmitted = false;
@@ -78,11 +89,11 @@ class QuizApp {
                 this.updateQuizHeader();
                 this.displayCurrentQuestion();
             } else {
-                throw new Error('Failed to generate quiz');
+                throw new Error(data.error || 'Failed to generate quiz');
             }
         } catch (error) {
             console.error('Error generating quiz:', error);
-            alert('Error generating quiz. Please try again.');
+            alert(`Error generating quiz: ${error.message}. Please try again.`);
         } finally {
             this.hideLoading();
         }
